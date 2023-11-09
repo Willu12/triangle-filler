@@ -1,7 +1,3 @@
-// Draws a simple white triangle
-// based on the example from:
-// https://github.com/brendanzab/gl-rs/blob/master/gl/examples/triangle.rs
-
 use egui_sdl2_gl::gl;
 use egui_sdl2_gl::gl::types::*;
 use std::ffi::CString;
@@ -10,27 +6,34 @@ use std::ptr;
 use std::str;
 
 const VS_SRC: &'static str = "
-#version 150
-in vec2 position;
+#version 330 core
+layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aCol;
+
+out vec3 ourColor;
 
 void main() {
-    gl_Position = vec4(position, 0.0, 1.0);
+    gl_Position = vec4(aPos, 1.0);
+    ourColor = aCol;
 }";
 
 const FS_SRC: &'static str = "
-#version 150
-out vec4 out_color;
+#version 330 core
+out vec4 FragColor;
+in vec3 ourColor;
 
 void main() {
-    out_color = vec4(1.0, 1.0, 1.0, 1.0);
+    FragColor = vec4(ourColor, 1.0);
 }";
 
-static VERTEX_DATA: [GLfloat; 6] = [0.0, 0.5, 0.5, -0.5, -0.5, -0.5];
+pub type MyVertex = [GLfloat; 3];
+
 
 pub struct Triangle {
     pub program: GLuint,
     pub vao: GLuint,
     pub vbo: GLuint,
+    pub vertices: [MyVertex; 3],
 }
 
 pub fn compile_shader(src: &str, ty: GLenum) -> GLuint {
@@ -106,7 +109,7 @@ pub fn link_program(vs: GLuint, fs: GLuint) -> GLuint {
 }
 
 impl Triangle {
-    pub fn new() -> Self {
+    pub fn new(vertices : [MyVertex;3]) -> Self {
         // Create Vertex Array Object
         let mut vao = 0;
         let mut vbo = 0;
@@ -117,40 +120,49 @@ impl Triangle {
             gl::GenVertexArrays(1, &mut vao);
             gl::GenBuffers(1, &mut vbo);
         }
-        Triangle { program, vao, vbo }
+        Triangle { program, vao, vbo,vertices }
     }
 
     pub fn draw(&self) {
         unsafe {
             gl::BindVertexArray(self.vao);
 
-            // Create a Vertex Buffer Object and copy the vertex data to it
+            let vertex_data =
+                [(self.vertices[0] as [GLfloat;3]),([1.0,0.0,0.0] as [GLfloat;3]),
+                (self.vertices[1] as [GLfloat;3]), ([0.0,1.0,0.0] as [GLfloat;3]),
+                (self.vertices[2] as [GLfloat;3]), ([0.0,0.0,1.0] as [GLfloat;3])].concat();
 
             gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
             gl::BufferData(
                 gl::ARRAY_BUFFER,
-                (VERTEX_DATA.len() * mem::size_of::<GLfloat>()) as GLsizeiptr,
-                mem::transmute(&VERTEX_DATA[0]),
+                (vertex_data.len() * mem::size_of::<GLfloat>()) as GLsizeiptr,
+                mem::transmute(&vertex_data[0]),
                 gl::STATIC_DRAW,
             );
 
             // Use shader program
             gl::UseProgram(self.program);
-            let c_out_color = CString::new("out_color").unwrap();
-            gl::BindFragDataLocation(self.program, 0, c_out_color.as_ptr());
 
-            // Specify the layout of the vertex data
-            let c_position = CString::new("position").unwrap();
-            let pos_attr = gl::GetAttribLocation(self.program, c_position.as_ptr());
-            gl::EnableVertexAttribArray(pos_attr as GLuint);
             gl::VertexAttribPointer(
-                pos_attr as GLuint,
-                2,
+                0 as GLuint,
+                3,
                 gl::FLOAT,
                 gl::FALSE as GLboolean,
-                0,
+                6 * mem::size_of::<GLfloat>() as GLsizei,
                 ptr::null(),
             );
+            gl::EnableVertexAttribArray(0 as GLuint);
+
+            // color triangle
+            gl::VertexAttribPointer(
+                1 as GLuint,
+                3,
+                gl::FLOAT,
+                gl::FALSE as GLboolean,
+                6 * mem::size_of::<GLfloat>() as GLsizei,
+                (3 * mem::size_of::<GLfloat>() as GLsizei) as *const _,
+            );
+            gl::EnableVertexAttribArray(1 as GLuint);
 
             // Draw a triangle from the 3 vertices
             gl::DrawArrays(gl::TRIANGLES, 0, 3);

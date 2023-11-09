@@ -7,11 +7,13 @@ use egui_backend::sdl2::video::GLProfile;
 use egui_backend::{egui, gl, sdl2};
 use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
 use egui_sdl2_gl as egui_backend;
+use sdl2::sys::uint_least32_t;
 use sdl2::video::SwapInterval;
 mod triangle;
+mod grid;
 
-const SCREEN_WIDTH: u32 = 800;
-const SCREEN_HEIGHT: u32 = 600;
+const SCREEN_WIDTH: u32 = 1000;
+const SCREEN_HEIGHT: u32 = 800;
 const PIC_WIDTH: i32 = 320;
 const PIC_HEIGHT: i32 = 192;
 
@@ -74,6 +76,12 @@ fn main() {
     let chip8_tex_id =
         painter.new_user_texture((PIC_WIDTH as usize, PIC_HEIGHT as usize), &srgba, false);
 
+    // grid variables
+    let mut x_accuracy: u32 = 10;
+    let mut y_accuracy: u32 = 10;
+
+    let mut accuracy_changed: bool = false;
+
     // Some variables to help draw a sine wave
     let mut sine_shift = 0f32;
     let mut amplitude: f32 = 50f32;
@@ -81,7 +89,10 @@ fn main() {
         "A text box to write in. Cut, copy, paste commands are available.".to_owned();
     let start_time = Instant::now();
     // We will draw a crisp white triangle using OpenGL.
-    let triangle = triangle::Triangle::new();
+   // let triangle = triangle::Triangle::new();
+
+    let mut grid = grid::Grid::new(10,10);
+    grid.update_triangles();
     let mut quit = false;
 
     'running: loop {
@@ -98,7 +109,10 @@ fn main() {
         }
 
         // Then draw our triangle.
-        triangle.draw();
+       // triangle.draw();
+        accuracy_changed = grid.update_accuracy(x_accuracy,y_accuracy);
+        if accuracy_changed {grid.update_triangles()}
+        grid.draw();
 
         let mut srgba: Vec<Color32> = Vec::new();
         let mut angle = 0f32;
@@ -131,6 +145,9 @@ fn main() {
             ui.text_edit_multiline(&mut test_str);
             ui.label(" ");
             ui.add(egui::Slider::new(&mut amplitude, 0.0..=50.0).text("Amplitude"));
+            ui.add(egui::Slider::new(&mut x_accuracy,1..=100).text("X Accuracy"));
+            ui.add(egui::Slider::new(&mut y_accuracy,1..=100).text("Y Accuracy"));
+
             ui.label(" ");
             if ui.button("Quit").clicked() {
                 quit = true;
