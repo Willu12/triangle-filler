@@ -1,7 +1,5 @@
 use egui_sdl2_gl::gl;
 use egui_sdl2_gl::gl::types::*;
-use crate::triangle::Triangle;
-use crate::triangle::*;
 use std::mem;
 use std::ptr;
 use std::str;
@@ -122,6 +120,15 @@ impl Grid {
             gl::BindVertexArray(0);
         }
     }
+
+    fn drop(&mut self) {
+        unsafe {
+            gl::DeleteProgram(self.program);
+            gl::DeleteBuffers(1, &self.vbo);
+            gl::DeleteVertexArrays(1, &self.vao);
+            gl::DeleteBuffers(1,&self.ebo);
+        }
+    }
 }
 
 unsafe fn get_uniform_location(program: GLuint, uniform_name: &str) -> GLint {
@@ -129,6 +136,43 @@ unsafe fn get_uniform_location(program: GLuint, uniform_name: &str) -> GLint {
 
     unsafe {
       gl::GetUniformLocation(program,cname.as_ptr())
+    }
+}
+
+pub fn link_program(vs: GLuint, fs: GLuint) -> GLuint {
+    unsafe {
+        let program = gl::CreateProgram();
+        gl::AttachShader(program, vs);
+        gl::AttachShader(program, fs);
+        gl::LinkProgram(program);
+
+        gl::DetachShader(program, fs);
+        gl::DetachShader(program, vs);
+        gl::DeleteShader(fs);
+        gl::DeleteShader(vs);
+
+        // Get the link status
+        let mut status = gl::FALSE as GLint;
+        gl::GetProgramiv(program, gl::LINK_STATUS, &mut status);
+
+        // Fail on error
+        if status != (gl::TRUE as GLint) {
+            let mut len: GLint = 0;
+            gl::GetProgramiv(program, gl::INFO_LOG_LENGTH, &mut len);
+            let mut buf = Vec::with_capacity(len as usize);
+            buf.set_len((len as usize) - 1); // subtract 1 to skip the trailing null character
+            gl::GetProgramInfoLog(
+                program,
+                len,
+                ptr::null_mut(),
+                buf.as_mut_ptr() as *mut GLchar,
+            );
+            panic!(
+                "{}",
+                str::from_utf8(&buf).expect("ProgramInfoLog not valid utf8")
+            );
+        }
+        program
     }
 }
 

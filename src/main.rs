@@ -11,7 +11,6 @@ use sdl2::sys::uint_least32_t;
 use sdl2::video::SwapInterval;
 use crate::shader::get_shader_string_from_file;
 
-mod triangle;
 mod grid;
 mod shader;
 mod camera;
