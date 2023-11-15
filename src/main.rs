@@ -14,6 +14,7 @@ use crate::shader::get_shader_string_from_file;
 mod triangle;
 mod grid;
 mod shader;
+mod camera;
 
 const SCREEN_WIDTH: u32 = 1000;
 const SCREEN_HEIGHT: u32 = 800;
@@ -64,39 +65,16 @@ fn main() {
         egui_backend::with_sdl2(&window, ShaderVersion::Default, DpiScaling::Default);
     let egui_ctx = egui::Context::default();
     let mut event_pump: sdl2::EventPump = sdl_context.event_pump().unwrap();
-    let mut srgba: Vec<Color32> = Vec::new();
-
-    // For now we will just set everything to black, because
-    // we will be updating it dynamically later. However, this could just as
-    // easily have been some actual picture data loaded in.
-    for _ in 0..PIC_HEIGHT {
-        for _ in 0..PIC_WIDTH {
-            srgba.push(Color32::BLACK);
-        }
-    }
-
-    // The user texture is what allows us to mix Egui and GL rendering contexts.
-    // Egui just needs the texture id, as the actual texture is managed by the backend.
-    let chip8_tex_id =
-        painter.new_user_texture((PIC_WIDTH as usize, PIC_HEIGHT as usize), &srgba, false);
 
     // grid variables
     let mut x_accuracy: u32 = 10;
     let mut y_accuracy: u32 = 10;
 
     let mut accuracy_changed: bool = false;
-
-    // Some variables to help draw a sine wave
-    let mut sine_shift = 0f32;
-    let mut amplitude: f32 = 50f32;
-    let mut test_str: String =
-        "A text box to write in. Cut, copy, paste commands are available.".to_owned();
     let start_time = Instant::now();
-    // We will draw a crisp white triangle using OpenGL.
-   // let triangle = triangle::Triangle::new();
 
-    let mut grid = grid::Grid::new(10,10);
-    grid.update_triangles();
+    let mut camera = camera::Camera::new();
+    let mut grid = grid::Grid::new();
     let mut quit = false;
 
     'running: loop {
@@ -108,48 +86,17 @@ fn main() {
         // First clear the background to something nice.
         unsafe {
             // Clear the screen to green
-            gl::ClearColor(0.3, 0.6, 0.3, 1.0);
+            gl::ClearColor(0.3, 0.2, 0.3, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
-
-        // Then draw our triangle.
-       // triangle.draw();
-        accuracy_changed = grid.update_accuracy(x_accuracy,y_accuracy);
-        if accuracy_changed {grid.update_triangles()}
         grid.draw();
-
-        let mut srgba: Vec<Color32> = Vec::new();
-        let mut angle = 0f32;
-        // Draw a cool sine wave in a buffer.
-        for y in 0..PIC_HEIGHT {
-            for x in 0..PIC_WIDTH {
-                srgba.push(Color32::BLACK);
-                if y == PIC_HEIGHT - 1 {
-                    let y = amplitude * (angle * 3.142f32 / 180f32 + sine_shift).sin();
-                    let y = PIC_HEIGHT as f32 / 2f32 - y;
-                    srgba[(y as i32 * PIC_WIDTH + x) as usize] = Color32::YELLOW;
-                    angle += 360f32 / PIC_WIDTH as f32;
-                }
-            }
-        }
-
-        println!("{}",get_shader_string_from_file("resources/shaders/fragmentShader.glsl"));
-        sine_shift += 0.1f32;
-
-        // This updates the previously initialized texture with new data.
-        // If we weren't updating the texture, this call wouldn't be required.
-        painter.update_user_texture_data(chip8_tex_id, &srgba);
 
         egui::Window::new("Egui with SDL2 and GL").show(&egui_ctx, |ui| {
             // Image just needs a texture id reference, so we just pass it the texture id that was returned to us
             // when we previously initialized the texture.
-            ui.add(Image::new(SizedTexture::new(chip8_tex_id, vec2(PIC_WIDTH as f32, PIC_HEIGHT as f32))));
             ui.separator();
-            ui.label("A simple sine wave plotted onto a GL texture then blitted to an egui managed Image.");
             ui.label(" ");
-            ui.text_edit_multiline(&mut test_str);
             ui.label(" ");
-            ui.add(egui::Slider::new(&mut amplitude, 0.0..=50.0).text("Amplitude"));
             ui.add(egui::Slider::new(&mut x_accuracy,1..=MAX_ACCURACY).text("X Accuracy"));
             ui.add(egui::Slider::new(&mut y_accuracy,1..=MAX_ACCURACY).text("Y Accuracy"));
 
@@ -182,6 +129,7 @@ fn main() {
             if let Some(event) = event_pump.wait_event_timeout(5) {
                 match event {
                     Event::Quit { .. } => break 'running,
+                    Event::KeyDown {keycode :Some(key),..} => { grid.camera.process_key(key) }
                     _ => {
                         // Process input event
                         egui_state.process_input(&window, event, &mut painter);

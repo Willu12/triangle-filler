@@ -101,7 +101,7 @@ impl Triangle {
                 6 * mem::size_of::<GLfloat>() as GLsizei,
                 ptr::null(),
             );
-            gl::EnableVertexAttribArray(0 as GLuint);
+           gl::EnableVertexAttribArray(0 as GLuint);
 
             // color triangle
             gl::VertexAttribPointer(

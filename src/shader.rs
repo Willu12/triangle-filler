@@ -6,6 +6,10 @@ use std::ptr;
 use std::str;
 use std::fs;
 
+pub const VS_SRC: &'static str = "resources/shaders/vertexShader.glsl";
+pub const FS_SRC: &'static str = "resources/shaders/fragmentShader.glsl";
+
+
 pub struct Shader {
     pub id : GLuint,
 

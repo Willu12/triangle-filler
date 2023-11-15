@@ -1,66 +1,138 @@
-use egui_sdl2_gl::gl::types::GLfloat;
+use egui_sdl2_gl::gl;
+use egui_sdl2_gl::gl::types::*;
 use crate::triangle::Triangle;
 use crate::triangle::*;
+use std::mem;
+use std::ptr;
+use std::str;
+use crate::{SCREEN_HEIGHT, SCREEN_WIDTH};
+use crate::camera::Camera;
+use crate::shader::*;
+
+const VERTEX_COLOR_STRING: &'static str = "ourColor";
 
 pub struct Grid {
-    pub x_accuracy : u32,
-    pub y_accuracy : u32,
-    pub triangles : Vec<Triangle>
+    pub tessellation_level: u32,
+    pub vertices: [GLfloat; 12],
+    pub indices: [u32;6],
+    pub vao: GLuint,
+    pub vbo: GLuint,
+    pub ebo: GLuint,
+    pub program: GLuint,
+    pub color: [GLfloat; 3],
+    pub camera : Camera
+
 }
 
 impl Grid {
-    pub fn new(x: u32, y: u32) -> Self {
-        Grid {x_accuracy : x, y_accuracy: y, triangles: vec![]}
-    }
+    pub fn new() -> Self {
 
-    pub fn draw(&mut self) {
-        for triangle in self.triangles.iter() {
-            triangle.draw();
+        let vertices = [
+            0.5,  0.5, 0.0,  // top right
+            0.5, -0.5, 0.0,  // bottom right
+            -0.5, -0.5, 0.0,  // bottom left
+            -0.5,  0.5, 0.0 ];
+        let indices : [u32;6] =
+            [0,1,3,
+             1,2,3];
+
+        let mut vao = 0;
+        let mut vbo = 0;
+        let mut ebo = 0;
+
+        let vs = Shader::new(VS_SRC, gl::VERTEX_SHADER);
+        let fs = Shader::new(FS_SRC, gl::FRAGMENT_SHADER);
+
+
+        let program = link_program(vs.id, fs.id);
+        let color = [1.0,0.3,0.6];
+
+        unsafe {
+            gl::GenVertexArrays(1, &mut vao);
+            gl::GenBuffers(1, &mut vbo);
+            gl::GenBuffers(1,&mut ebo);
         }
+
+        let camera = Camera::new();
+
+        let mut grid = Grid {tessellation_level : 1, vertices,indices, vao, vbo,ebo,program,color,camera};
+        grid.init_grid();
+
+        return grid;
     }
 
-    pub fn update_accuracy(&mut self, x: u32, y:u32) -> bool {
-        let mut accuracy_changed = false;
-        if self.x_accuracy != x || self.y_accuracy != y {accuracy_changed = true};
-        self.x_accuracy = x;
-        self.y_accuracy = y;
+   pub fn init_grid(&self) {
+        unsafe {
+            gl::BindVertexArray(self.vao);
 
-        accuracy_changed
-    }
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.vbo);
+            gl::BufferData(
+                gl::ARRAY_BUFFER,
+                (self.vertices.len() * mem::size_of::<GLfloat>()) as GLsizeiptr,
+                mem::transmute(&self.vertices[0]),
+                gl::STATIC_DRAW,
+            );
 
-    pub fn update_triangles(&mut self) {
-        let triangle_points = self.calculate_triangles_points();
+            //
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.ebo);
+            gl::BufferData(
+                gl::ELEMENT_ARRAY_BUFFER,
+                (self.indices.len() * mem::size_of::<GLfloat>()) as GLsizeiptr,
+                mem::transmute(&self.indices[0]),
+                gl::STATIC_DRAW,
+            );
 
-        for triangle in triangle_points {
-            let new_triangle = Triangle::new(triangle);
-            self.triangles.push(new_triangle);
+
+            gl::VertexAttribPointer(
+                0 as GLuint,
+                3,
+                gl::FLOAT,
+                gl::FALSE as GLboolean,
+                3 * mem::size_of::<GLfloat>() as GLsizei,
+                ptr::null(),
+            );
+
+            gl::EnableVertexAttribArray(0 as GLuint);
         }
-    }
+   }
 
-    fn calculate_triangles_points(&self) -> Vec<[MyVertex;3]> {
-        let mut triangles: Vec<[MyVertex;3]> = vec![];
-        let x_offset = 2.0 / self.x_accuracy as f32;
-        let y_offset = 2.0  / self.y_accuracy as f32;
+    pub fn draw(&self) {
+        unsafe{
 
-        // we create 2 triangles for each square of our grid
-        for x in 0..self.x_accuracy {
-            for y in 0..self.y_accuracy {
-                let start: [GLfloat;3] = [-1.0 + x as f32 * x_offset, -1.0 + (y + 1) as f32 * y_offset,0.0];
-                let end: [GLfloat;3] = [-1.0 + (x + 1) as f32 * x_offset,-1.0 + y as f32 * y_offset,0.0];
+            let cname = std::ffi::CString::new(VERTEX_COLOR_STRING).expect("CString::new failed");
+            let vertex_color_location = gl::GetUniformLocation(self.program,cname.as_ptr());
+            let projection_location = gl::GetUniformLocation(self.program,std::ffi::CString::new("projection").expect("CString::new failed").as_ptr());
+            let view_location = gl::GetUniformLocation(self.program,std::ffi::CString::new("view").expect("CString::new failed").as_ptr());
+            let model_location = gl::GetUniformLocation(self.program,std::ffi::CString::new("model").expect("CString::new failed").as_ptr());
 
-                let mid_upper: [GLfloat;3] = [-1.0 + x as f32 * x_offset, -1.0 + y as f32 * y_offset,0.0];
-                let mid_lower: [GLfloat;3] = [-1.0 + (x + 1) as f32 * x_offset,-1.0 + (y + 1) as f32 * y_offset,0.0];
+            let model = glam::Mat4::from_rotation_x(-10.0);
+            let view = self.camera.get_view();//glam::Mat4::from_translation(glam::Vec3::new(0.0,0.0,-3.0));
 
-                //create upper triangle
-                triangles.push([start,mid_upper,end]);
-                triangles.push([start,mid_lower,end]);
-            }
+            let projection = glam::Mat4::perspective_rh(
+                70.0,
+                SCREEN_WIDTH as f32/SCREEN_HEIGHT as f32,
+                0.1,
+                100.0);
+
+            gl::UseProgram(self.program);
+            gl::Uniform3f(vertex_color_location,self.color[0],self.color[1],self.color[2]);
+
+            gl::UniformMatrix4fv(view_location,1,gl::FALSE,view.to_cols_array().as_ptr());
+            gl::UniformMatrix4fv(projection_location,1,gl::FALSE,projection.to_cols_array().as_ptr());
+            gl::UniformMatrix4fv(model_location,1,gl::FALSE,model.to_cols_array().as_ptr());
+
+
+            gl::BindVertexArray(self.vao);
+
+            // Draw a triangle from the 3 vertices
+            gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT,std::ptr::null());
+
+            gl::BindVertexArray(0);
+
         }
-       return triangles;
     }
 
 
 
 }
 
-//teraz chialbym podzielic ekran
