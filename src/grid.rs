@@ -29,17 +29,14 @@ impl Grid {
 
         let vertices = [
             0.5,  0.5, 0.0,  // top right
-            0.5, -0.5, 0.0,  // bottom right
+            0.5, -0.5, 0.0,  // bottom rights
             -0.5, -0.5, 0.0,  // bottom left
             -0.5,  0.5, 0.0 ];
         let indices : [u32;6] =
             [0,1,3,
              1,2,3];
 
-        let mut vao = 0;
-        let mut vbo = 0;
-        let mut ebo = 0;
-
+        let (mut vao,mut vbo,mut ebo) = (0,0,0);
         let vs = Shader::new(VS_SRC, gl::VERTEX_SHADER);
         let fs = Shader::new(FS_SRC, gl::FRAGMENT_SHADER);
 
@@ -73,7 +70,7 @@ impl Grid {
                 gl::STATIC_DRAW,
             );
 
-            //
+
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.ebo);
             gl::BufferData(
                 gl::ELEMENT_ARRAY_BUFFER,
@@ -96,17 +93,13 @@ impl Grid {
         }
    }
 
-    pub fn draw(&self) {
-        unsafe{
+    unsafe fn set_uniforms(& self) {
+        unsafe {
+            let vertex_color_location = get_uniform_location(self.program,VERTEX_COLOR_STRING);
+            let projection_location = get_uniform_location(self.program,"projection");
+            let view_location = get_uniform_location(self.program,"view");
 
-            let cname = std::ffi::CString::new(VERTEX_COLOR_STRING).expect("CString::new failed");
-            let vertex_color_location = gl::GetUniformLocation(self.program,cname.as_ptr());
-            let projection_location = gl::GetUniformLocation(self.program,std::ffi::CString::new("projection").expect("CString::new failed").as_ptr());
-            let view_location = gl::GetUniformLocation(self.program,std::ffi::CString::new("view").expect("CString::new failed").as_ptr());
-            let model_location = gl::GetUniformLocation(self.program,std::ffi::CString::new("model").expect("CString::new failed").as_ptr());
-
-            let model = glam::Mat4::from_rotation_x(-10.0);
-            let view = self.camera.get_view();//glam::Mat4::from_translation(glam::Vec3::new(0.0,0.0,-3.0));
+            let view = self.camera.get_view();
 
             let projection = glam::Mat4::perspective_rh(
                 70.0,
@@ -116,23 +109,26 @@ impl Grid {
 
             gl::UseProgram(self.program);
             gl::Uniform3f(vertex_color_location,self.color[0],self.color[1],self.color[2]);
-
             gl::UniformMatrix4fv(view_location,1,gl::FALSE,view.to_cols_array().as_ptr());
             gl::UniformMatrix4fv(projection_location,1,gl::FALSE,projection.to_cols_array().as_ptr());
-            gl::UniformMatrix4fv(model_location,1,gl::FALSE,model.to_cols_array().as_ptr());
-
-
-            gl::BindVertexArray(self.vao);
-
-            // Draw a triangle from the 3 vertices
-            gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT,std::ptr::null());
-
-            gl::BindVertexArray(0);
-
         }
     }
 
+    pub fn draw(&self) {
+        unsafe {
+            self.set_uniforms();
+            gl::BindVertexArray(self.vao);
+            gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT,std::ptr::null());
+            gl::BindVertexArray(0);
+        }
+    }
+}
 
+unsafe fn get_uniform_location(program: GLuint, uniform_name: &str) -> GLint {
+    let cname = std::ffi::CString::new(uniform_name).expect("CString::new failed");
 
+    unsafe {
+      gl::GetUniformLocation(program,cname.as_ptr())
+    }
 }
 

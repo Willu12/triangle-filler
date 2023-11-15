@@ -12,12 +12,8 @@ pub struct Camera {
 
 impl Camera {
     pub fn new() -> Camera {
-        Camera {position : Vec3::new(0.1,0.1,3.0), target : Vec3::ZERO, direction : Vec3::new(0.0,1.0,0.0)}
+        Camera {position : Vec3::new(0.1,0.1,2.0), target : Vec3::ZERO, direction : Vec3::new(0.0,1.0,0.0)}
     }
-
-    //chemy zrobic zeby ruch kamery odbywal sie w wspolrzedncyh sferycznych
-    // strzalka w gore zmienia alfa strzalka w bok beta
-    // aktualiazujemy
 
     fn get_spherical_coordinates(&self) -> (f32,f32,f32) {
         let r = (self.position.dot(self.position)).sqrt();
