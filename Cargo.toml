@@ -8,5 +8,5 @@ edition = "2021"
 [dependencies]
 egui_sdl2_gl = "0.23.0"
 sdl2 = "0.35.2"
-
+glam = "0.24.2"
 

@@ -9,13 +9,17 @@ use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
 use egui_sdl2_gl as egui_backend;
 use sdl2::sys::uint_least32_t;
 use sdl2::video::SwapInterval;
+use crate::shader::get_shader_string_from_file;
+
 mod triangle;
 mod grid;
+mod shader;
 
 const SCREEN_WIDTH: u32 = 1000;
 const SCREEN_HEIGHT: u32 = 800;
 const PIC_WIDTH: i32 = 320;
 const PIC_HEIGHT: i32 = 192;
+const MAX_ACCURACY: u32 = 50;
 
 fn main() {
     let sdl_context = sdl2::init().unwrap();
@@ -129,6 +133,7 @@ fn main() {
             }
         }
 
+        println!("{}",get_shader_string_from_file("resources/shaders/fragmentShader.glsl"));
         sine_shift += 0.1f32;
 
         // This updates the previously initialized texture with new data.
@@ -145,8 +150,8 @@ fn main() {
             ui.text_edit_multiline(&mut test_str);
             ui.label(" ");
             ui.add(egui::Slider::new(&mut amplitude, 0.0..=50.0).text("Amplitude"));
-            ui.add(egui::Slider::new(&mut x_accuracy,1..=100).text("X Accuracy"));
-            ui.add(egui::Slider::new(&mut y_accuracy,1..=100).text("Y Accuracy"));
+            ui.add(egui::Slider::new(&mut x_accuracy,1..=MAX_ACCURACY).text("X Accuracy"));
+            ui.add(egui::Slider::new(&mut y_accuracy,1..=MAX_ACCURACY).text("Y Accuracy"));
 
             ui.label(" ");
             if ui.button("Quit").clicked() {

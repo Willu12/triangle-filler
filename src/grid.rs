@@ -1,7 +1,4 @@
-use egui_sdl2_gl::egui::epaint::Vertex;
 use egui_sdl2_gl::gl::types::GLfloat;
-use sdl2::libc::xsw_usage;
-use crate::{SCREEN_HEIGHT, SCREEN_WIDTH, triangle};
 use crate::triangle::Triangle;
 use crate::triangle::*;
 

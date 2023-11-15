@@ -4,27 +4,10 @@ use std::ffi::CString;
 use std::mem;
 use std::ptr;
 use std::str;
+use crate::shader::*;
 
-const VS_SRC: &'static str = "
-#version 330 core
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aCol;
-
-out vec3 ourColor;
-
-void main() {
-    gl_Position = vec4(aPos, 1.0);
-    ourColor = aCol;
-}";
-
-const FS_SRC: &'static str = "
-#version 330 core
-out vec4 FragColor;
-in vec3 ourColor;
-
-void main() {
-    FragColor = vec4(ourColor, 1.0);
-}";
+const VS_SRC: &'static str = "resources/shaders/vertexShader.glsl";
+const FS_SRC: &'static str = "resources/shaders/fragmentShader.glsl";
 
 pub type MyVertex = [GLfloat; 3];
 
@@ -36,40 +19,7 @@ pub struct Triangle {
     pub vertices: [MyVertex; 3],
 }
 
-pub fn compile_shader(src: &str, ty: GLenum) -> GLuint {
-    let shader;
-    unsafe {
-        // Create GLSL shaders
-        shader = gl::CreateShader(ty);
-        // Attempt to compile the shader
-        let c_str = CString::new(src.as_bytes()).unwrap();
-        gl::ShaderSource(shader, 1, &c_str.as_ptr(), ptr::null());
-        gl::CompileShader(shader);
 
-        // Get the compile status
-        let mut status = gl::FALSE as GLint;
-        gl::GetShaderiv(shader, gl::COMPILE_STATUS, &mut status);
-
-        // Fail on error
-        if status != (gl::TRUE as GLint) {
-            let mut len = 0;
-            gl::GetShaderiv(shader, gl::INFO_LOG_LENGTH, &mut len);
-            let mut buf = Vec::with_capacity(len as usize);
-            buf.set_len((len as usize) - 1); // subtract 1 to skip the trailing null character
-            gl::GetShaderInfoLog(
-                shader,
-                len,
-                ptr::null_mut(),
-                buf.as_mut_ptr() as *mut GLchar,
-            );
-            panic!(
-                "{}",
-                str::from_utf8(&buf).expect("ShaderInfoLog not valid utf8")
-            );
-        }
-    }
-    shader
-}
 
 pub fn link_program(vs: GLuint, fs: GLuint) -> GLuint {
     unsafe {
@@ -113,9 +63,9 @@ impl Triangle {
         // Create Vertex Array Object
         let mut vao = 0;
         let mut vbo = 0;
-        let vs = compile_shader(VS_SRC, gl::VERTEX_SHADER);
-        let fs = compile_shader(FS_SRC, gl::FRAGMENT_SHADER);
-        let program = link_program(vs, fs);
+        let vs = Shader::new(VS_SRC, gl::VERTEX_SHADER);
+        let fs = Shader::new(FS_SRC, gl::FRAGMENT_SHADER);
+        let program = link_program(vs.id, fs.id);
         unsafe {
             gl::GenVertexArrays(1, &mut vao);
             gl::GenBuffers(1, &mut vbo);
