@@ -7,6 +7,7 @@ use egui_backend::sdl2::video::GLProfile;
 use egui_backend::{egui, gl, sdl2};
 use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
 use egui_sdl2_gl as egui_backend;
+use egui_sdl2_gl::gl::types::GLfloat;
 use sdl2::sys::uint_least32_t;
 use sdl2::video::SwapInterval;
 use crate::shader::get_shader_string_from_file;
@@ -14,6 +15,7 @@ use crate::shader::get_shader_string_from_file;
 mod grid;
 mod shader;
 mod camera;
+mod egui_manager;
 
 const SCREEN_WIDTH: u32 = 1000;
 const SCREEN_HEIGHT: u32 = 800;
@@ -67,6 +69,7 @@ fn main() {
 
     // grid variables
     let mut tessellation_level: u32 = 10;
+    let mut z_coords : [GLfloat;16] = [0.0;16];
     let start_time = Instant::now();
 
     let mut grid = grid::Grid::new();
@@ -89,16 +92,19 @@ fn main() {
             grid.tessellation_level = tessellation_level;
         }
 
+        grid.update_z_coords(z_coords);
+
         grid.draw();
 
         egui::Window::new("Egui with SDL2 and GL").show(&egui_ctx, |ui| {
             // Image just needs a texture id reference, so we just pass it the texture id that was returned to us
             // when we previously initialized the texture.
+
             ui.separator();
             ui.label(" ");
             ui.label(" ");
             ui.add(egui::Slider::new(&mut tessellation_level,1..=MAX_TESSELLATION).text("tessellation level"));
-
+            egui_manager::add_sliders_to_egui(ui, &mut z_coords);
             ui.label(" ");
             if ui.button("Quit").clicked() {
                 quit = true;
