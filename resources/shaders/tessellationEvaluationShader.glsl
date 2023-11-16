@@ -1,60 +1,84 @@
-// tessellation evaluation shader
-#version 410 core
+#version 400
+layout( quads ) in;
 
-layout (quads, fractional_odd_spacing, ccw) in;
+out vec3 TENormal;
+out vec4 TEPosition;
 
-uniform mat4 model;           // the model matrix
-uniform mat4 view;            // the view matrix
-uniform mat4 projection;      // the projection matrix
+uniform mat4 MVP;
+uniform mat4 ModelViewMatrix;
+uniform mat3 NormalMatrix;
 
-// received from Tessellation Control Shader - all texture coordinates for the patch vertices
-in vec2 TextureCoord[];
+void basisFunctions( out float[4] b, out float[4] db, float t )
+{
+    float t1 = (1.0 - t);
+    float t12 = t1 * t1;
 
-// send to Fragment Shader for coloring
-out float Height;
+    b[0] = t12 * t1;
+    b[1] = 3.0 * t12 * t;
+    b[2] = 3.0 * t1 * t * t;
+    b[3] = t * t * t;
+
+    db[0] = -3.0 * t1 * t1;
+    db[1] = -6.0 * t * t1 + 3.0 * t12;
+    db[2] = -3.0 * t * t + 6.0 * t * t1;
+    db[3] = 3.0 * t * t;
+}
 
 void main()
 {
-    // get patch coordinate
     float u = gl_TessCoord.x;
     float v = gl_TessCoord.y;
 
-    // ----------------------------------------------------------------------
-    // retrieve control point texture coordinates
-    vec2 t00 = TextureCoord[0];
-    vec2 t01 = TextureCoord[1];
-    vec2 t10 = TextureCoord[2];
-    vec2 t11 = TextureCoord[3];
-
-    // bilinearly interpolate texture coordinate across patch
-    vec2 t0 = (t01 - t00) * u + t00;
-    vec2 t1 = (t11 - t10) * u + t10;
-    vec2 texCoord = (t1 - t0) * v + t0;
-
-    // lookup texel at patch coordinate for height and scale + shift as desired
-    Height = texture(heightMap, texCoord).y * 64.0 - 16.0;
-
-    // ----------------------------------------------------------------------
-    // retrieve control point position coordinates
+    // Reassign
     vec4 p00 = gl_in[0].gl_Position;
     vec4 p01 = gl_in[1].gl_Position;
-    vec4 p10 = gl_in[2].gl_Position;
-    vec4 p11 = gl_in[3].gl_Position;
+    vec4 p02 = gl_in[2].gl_Position;
+    vec4 p03 = gl_in[3].gl_Position;
+    vec4 p10 = gl_in[4].gl_Position;
+    vec4 p11 = gl_in[5].gl_Position;
+    vec4 p12 = gl_in[6].gl_Position;
+    vec4 p13 = gl_in[7].gl_Position;
+    vec4 p20 = gl_in[8].gl_Position;
+    vec4 p21 = gl_in[9].gl_Position;
+    vec4 p22 = gl_in[10].gl_Position;
+    vec4 p23 = gl_in[11].gl_Position;
+    vec4 p30 = gl_in[12].gl_Position;
+    vec4 p31 = gl_in[13].gl_Position;
+    vec4 p32 = gl_in[14].gl_Position;
+    vec4 p33 = gl_in[15].gl_Position;
 
-    // compute patch surface normal
-    vec4 uVec = p01 - p00;
-    vec4 vVec = p10 - p00;
-    vec4 normal = normalize( vec4(cross(vVec.xyz, uVec.xyz), 0) );
+    // Compute basis functions
+    float bu[4], bv[4];   // Basis functions for u and v
+    float dbu[4], dbv[4]; // Derivitives for u and v
+    basisFunctions(bu, dbu, u);
+    basisFunctions(bv, dbv, v);
 
-    // bilinearly interpolate position coordinate across patch
-    vec4 p0 = (p01 - p00) * u + p00;
-    vec4 p1 = (p11 - p10) * u + p10;
-    vec4 p = (p1 - p0) * v + p0;
+    // Bezier interpolation
+    TEPosition =
+    p00*bu[0]*bv[0] + p01*bu[0]*bv[1] + p02*bu[0]*bv[2] + p03*bu[0]*bv[3] +
+    p10*bu[1]*bv[0] + p11*bu[1]*bv[1] + p12*bu[1]*bv[2] + p13*bu[1]*bv[3] +
+    p20*bu[2]*bv[0] + p21*bu[2]*bv[1] + p22*bu[2]*bv[2] + p23*bu[2]*bv[3] +
+    p30*bu[3]*bv[0] + p31*bu[3]*bv[1] + p32*bu[3]*bv[2] + p33*bu[3]*bv[3];
 
-    // displace point along normal
-    p += normal * Height;
+    // Compute the normal vector
+    vec4 du =
+    p00*dbu[0]*bv[0] + p01*dbu[0]*bv[1] + p02*dbu[0]*bv[2] + p03*dbu[0]*bv[3] +
+    p10*dbu[1]*bv[0] + p11*dbu[1]*bv[1] + p12*dbu[1]*bv[2] + p13*dbu[1]*bv[3] +
+    p20*dbu[2]*bv[0] + p21*dbu[2]*bv[1] + p22*dbu[2]*bv[2] + p23*dbu[2]*bv[3] +
+    p30*dbu[3]*bv[0] + p31*dbu[3]*bv[1] + p32*dbu[3]*bv[2] + p33*dbu[3]*bv[3];
 
-    // ----------------------------------------------------------------------
-    // output patch point position in clip space
-    gl_Position = projection * view * model * p;
+    vec4 dv =
+    p00*bu[0]*dbv[0] + p01*bu[0]*dbv[1] + p02*bu[0]*dbv[2] + p03*bu[0]*dbv[3] +
+    p10*bu[1]*dbv[0] + p11*bu[1]*dbv[1] + p12*bu[1]*dbv[2] + p13*bu[1]*dbv[3] +
+    p20*bu[2]*dbv[0] + p21*bu[2]*dbv[1] + p22*bu[2]*dbv[2] + p23*bu[2]*dbv[3] +
+    p30*bu[3]*dbv[0] + p31*bu[3]*dbv[1] + p32*bu[3]*dbv[2] + p33*bu[3]*dbv[3];
+
+    vec3 n = normalize( cross(du.xyz, dv.xyz) );
+
+    // Transform to clip coordinates
+    gl_Position = MVP * TEPosition;
+
+    // Convert to camera coordinates
+    TEPosition = ModelViewMatrix * TEPosition;
+   // TENormal = normalize(NormalMatrix * n);
 }

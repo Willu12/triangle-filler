@@ -8,30 +8,23 @@ use std::fs;
 
 pub const VS_SRC: &'static str = "resources/shaders/vertexShader.glsl";
 pub const FS_SRC: &'static str = "resources/shaders/fragmentShader.glsl";
+pub const TCS_SRC: &'static str = "resources/shaders/tessellationControlShader.glsl";
+pub const TES_SRC: &'static str = "resources/shaders/tessellationEvaluationShader.glsl";
 
 
 pub struct Shader {
     pub id : GLuint,
-
 }
 
 impl Shader {
-
     pub fn new(file_path: &str, shader_type: GLenum) -> Shader {
         let shader_string = get_shader_string_from_file(file_path);
-
         Shader {id: compile_shader(&shader_string,shader_type)}
     }
-
-
 }
 
 pub fn get_shader_string_from_file(file_path : &str ) -> String {
-    let content = fs::read_to_string(file_path);
-    match content {
-        Ok(string) => return string,
-        Err(E) => panic!("{}",E)
-    }
+     fs::read_to_string(file_path).expect("failed to read file")
 }
 
 pub fn compile_shader(src: &str, ty: GLenum) -> GLuint {

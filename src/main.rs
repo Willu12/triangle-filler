@@ -19,7 +19,7 @@ const SCREEN_WIDTH: u32 = 1000;
 const SCREEN_HEIGHT: u32 = 800;
 const PIC_WIDTH: i32 = 320;
 const PIC_HEIGHT: i32 = 192;
-const MAX_ACCURACY: u32 = 50;
+const MAX_TESSELLATION: u32 = 64;
 
 fn main() {
     let sdl_context = sdl2::init().unwrap();
@@ -29,7 +29,7 @@ fn main() {
 
     // Let OpenGL know we are dealing with SRGB colors so that it
     // can do the blending correctly. Not setting the framebuffer
-    // leads to darkened, oversaturated colors.
+    // leads to darkened, over saturated colors.
     gl_attr.set_double_buffer(true);
     gl_attr.set_multisample_samples(4);
     gl_attr.set_framebuffer_srgb_compatible(true);
@@ -66,13 +66,9 @@ fn main() {
     let mut event_pump: sdl2::EventPump = sdl_context.event_pump().unwrap();
 
     // grid variables
-    let mut x_accuracy: u32 = 10;
-    let mut y_accuracy: u32 = 10;
-
-    let mut accuracy_changed: bool = false;
+    let mut tessellation_level: u32 = 10;
     let start_time = Instant::now();
 
-    let mut camera = camera::Camera::new();
     let mut grid = grid::Grid::new();
     let mut quit = false;
 
@@ -84,10 +80,15 @@ fn main() {
         // overlaying it:
         // First clear the background to something nice.
         unsafe {
-            // Clear the screen to green
             gl::ClearColor(0.3, 0.2, 0.3, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
+
+        //update tessellation
+        if grid.tessellation_level != tessellation_level {
+            grid.tessellation_level = tessellation_level;
+        }
+
         grid.draw();
 
         egui::Window::new("Egui with SDL2 and GL").show(&egui_ctx, |ui| {
@@ -96,8 +97,7 @@ fn main() {
             ui.separator();
             ui.label(" ");
             ui.label(" ");
-            ui.add(egui::Slider::new(&mut x_accuracy,1..=MAX_ACCURACY).text("X Accuracy"));
-            ui.add(egui::Slider::new(&mut y_accuracy,1..=MAX_ACCURACY).text("Y Accuracy"));
+            ui.add(egui::Slider::new(&mut tessellation_level,1..=MAX_TESSELLATION).text("tessellation level"));
 
             ui.label(" ");
             if ui.button("Quit").clicked() {

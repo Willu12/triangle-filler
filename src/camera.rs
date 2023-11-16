@@ -12,7 +12,7 @@ pub struct Camera {
 
 impl Camera {
     pub fn new() -> Camera {
-        Camera {position : Vec3::new(0.1,0.1,2.0), target : Vec3::ZERO, direction : Vec3::new(0.0,1.0,0.0)}
+        Camera {position : Vec3::new(0.1,0.1,1.0), target : Vec3::ZERO, direction : Vec3::new(0.0,1.0,0.0)}
     }
 
     fn get_spherical_coordinates(&self) -> (f32,f32,f32) {
