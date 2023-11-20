@@ -11,6 +11,7 @@ uniform uint m;
 uniform vec3 lightColor;
 uniform vec3 objectColor;
 uniform vec3 cameraPos;
+uniform sampler2D ourTexture;
 
 
 void main() {
@@ -26,5 +27,6 @@ void main() {
     cos_R_l_m = max(0.0,min(1.0,cos_R_l_m));
     vec3 rgb = kd * lightColor * objectColor * cos_n_l; + ks * lightColor * objectColor * cos_R_l_m;
 
-    FragColor = vec4(rgb,1.0);
+    vec2 texCoord = vec2((TEPosition.x + 0.75)/1.5 + (TEPosition.y + 0.75)/1.5);
+    FragColor = texture(ourTexture,texCoord)*vec4(rgb,1.0);
 }

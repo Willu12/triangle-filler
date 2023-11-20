@@ -2,6 +2,7 @@ use std::f64::consts;
 use egui_sdl2_gl::gl;
 use egui_sdl2_gl::gl::types::*;
 use std::mem;
+use std::path::Path;
 use std::ptr;
 use std::str;
 use egui_sdl2_gl::egui::ImageData::Color;
@@ -11,6 +12,7 @@ use crate::camera::Camera;
 use crate::light::Light;
 use crate::shader::*;
 use egui_sdl2_gl::egui::{Color32};
+use crate::texture::Texture;
 
 
 const VERTEX_COLOR_STRING: &'static str = "ourColor";
@@ -25,6 +27,7 @@ pub struct Grid {
     pub color: Color32,//[GLfloat; 3],
     pub camera : Camera,
     pub light : Light,
+    pub texture: Option<Texture>,
 }
 
 impl Grid {
@@ -50,8 +53,10 @@ impl Grid {
         let camera = Camera::new();
         let light = Light::new();
         vertices[7 * 3 + 2] = 0.5;
+        let tessellation_level = 1;
+        let texture = None;
 
-        let grid = Grid {tessellation_level: 1, vertices, vao, vbo, ebo, program, color, camera,light};
+        let grid = Grid {tessellation_level, vertices, vao, vbo, ebo, program, color, camera,light,texture};
         grid.init_grid();
 
         return grid;
@@ -90,7 +95,7 @@ impl Grid {
         return array;
     }
 
-    fn get_color_from_Color32(color: Color32) -> [GLfloat;3] {
+    fn get_color_from_color32(color: Color32) -> [GLfloat;3] {
         [color.r() as f32 /255.0, color.g() as f32 /255.0, color.b() as f32 /255.0]
     }
    pub fn init_grid(&self) {
@@ -119,6 +124,11 @@ impl Grid {
         }
    }
 
+    pub unsafe fn add_texture(&mut self, path: &Path) {
+        self.texture = Some(Texture::new());
+        self.texture.as_ref().unwrap().load(path);
+    }
+
 
     unsafe fn set_uniforms(&self) {
         unsafe {
@@ -131,6 +141,7 @@ impl Grid {
             let kd_location = get_uniform_location(self.program,"kd");
             let ks_location = get_uniform_location(self.program,"ks");
             let m_location = get_uniform_location(self.program,"m");
+           //let text_location = get_uniform_location(self.program,)
 
             let tessellation_level_location = get_uniform_location(self.program,"TessLevel");
 
@@ -140,8 +151,8 @@ impl Grid {
 
             let light_pos = self.light.light_position;
             let camera_pos = self.camera.position;
-            let light_col = Grid::get_color_from_Color32(self.light.light_color);
-            let object_col = Grid::get_color_from_Color32(self.color);
+            let light_col = Grid::get_color_from_color32(self.light.light_color);
+            let object_col = Grid::get_color_from_color32(self.color);
 
             gl::Uniform3f(light_pos_location,light_pos[0],light_pos[1],light_pos[2]);
             gl::Uniform3f(camera_pos_location,camera_pos[0],camera_pos[1],camera_pos[2]);
@@ -181,6 +192,8 @@ impl Grid {
     pub fn draw(&self) {
         unsafe {
             self.set_uniforms();
+            self.texture.as_ref().unwrap().bind();
+
             gl::BindVertexArray(self.vao);
             gl::DrawArrays(gl::PATCHES,0,16);
             gl::BindVertexArray(0);

@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::time::Instant;
 
 //Alias the backend to something less mouthful
@@ -18,6 +19,8 @@ mod shader;
 mod camera;
 mod egui_manager;
 mod light;
+mod normalMap;
+mod texture;
 
 const SCREEN_WIDTH: u32 = 1000;
 const SCREEN_HEIGHT: u32 = 800;
@@ -78,6 +81,9 @@ fn main() {
     let mut is_light_moving = false;
 
     let mut grid = grid::Grid::new();
+    unsafe{
+        grid.add_texture(Path::new("resources/images/normal_map.jpg"));
+    }
     let mut quit = false;
 
     'running: loop {
