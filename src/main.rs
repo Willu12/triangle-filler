@@ -61,10 +61,13 @@ fn main() {
     debug_assert_eq!(gl_attr.context_version(), (3, 2));
 
     // Enable vsync
-    window
+    match window
         .subsystem()
-        .gl_set_swap_interval(SwapInterval::VSync)
-        .unwrap();
+        .gl_set_swap_interval(SwapInterval::VSync) {
+        Result::Ok(()) => {()},
+        Result::Err(_) => {}
+    }
+      // .unwrap();
 
     // Init egui stuff
     let (mut painter, mut egui_state) =
