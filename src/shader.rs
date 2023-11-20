@@ -1,7 +1,6 @@
 use egui_sdl2_gl::gl;
 use egui_sdl2_gl::gl::types::*;
 use std::ffi::CString;
-use std::mem;
 use std::ptr;
 use std::str;
 use std::fs;

@@ -1,21 +1,16 @@
-use std::f64::consts;
 use egui_sdl2_gl::gl;
 use egui_sdl2_gl::gl::types::*;
 use std::mem;
 use std::path::Path;
 use std::ptr;
 use std::str;
-use egui_sdl2_gl::egui::ImageData::Color;
-use glam::{Mat3, Mat4, Vec3, Vec4Swizzles};
+use glam::{Mat3, Vec4Swizzles};
 use crate::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use crate::camera::Camera;
 use crate::light::Light;
 use crate::shader::*;
-use egui_sdl2_gl::egui::{Color32};
+use egui_sdl2_gl::egui::Color32;
 use crate::texture::Texture;
-
-
-const VERTEX_COLOR_STRING: &'static str = "ourColor";
 
 pub struct Grid {
     pub tessellation_level: u32,

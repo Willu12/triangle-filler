@@ -2,17 +2,13 @@ use std::path::Path;
 use std::time::Instant;
 
 //Alias the backend to something less mouthful
-use egui::load::SizedTexture;
-use egui_backend::egui::{vec2, Color32, FullOutput, Image};
+use egui_backend::egui::{Color32, FullOutput};
 use egui_backend::sdl2::video::GLProfile;
 use egui_backend::{egui, gl, sdl2};
 use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
 use egui_sdl2_gl as egui_backend;
 use egui_sdl2_gl::gl::types::GLfloat;
-use sdl2::pixels::Color;
-use sdl2::sys::uint_least32_t;
 use sdl2::video::SwapInterval;
-use crate::shader::get_shader_string_from_file;
 
 mod grid;
 mod shader;
@@ -24,8 +20,6 @@ mod texture;
 
 const SCREEN_WIDTH: u32 = 1000;
 const SCREEN_HEIGHT: u32 = 800;
-const PIC_WIDTH: i32 = 320;
-const PIC_HEIGHT: i32 = 192;
 const MAX_TESSELLATION: u32 = 64;
 
 fn main() {

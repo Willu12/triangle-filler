@@ -1,7 +1,7 @@
 use std::path::Path;
 use egui_sdl2_gl::gl;
 use egui_sdl2_gl::gl::types::GLuint;
-use image::{EncodableLayout, ImageError};
+use image::EncodableLayout;
 
 pub struct Texture {
     pub id : GLuint,
@@ -34,6 +34,7 @@ impl Texture {
             gl::UNSIGNED_BYTE,
             img.as_bytes().as_ptr() as *const _,
         );
+        gl::ActiveTexture(gl::TEXTURE0);
     }
 
 

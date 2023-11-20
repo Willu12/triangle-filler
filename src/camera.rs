@@ -19,8 +19,6 @@ impl Camera {
         let theta = f32::asin(position.z / r);
         let phi = f32::atan(position.y/ position.x);
 
-       // println!("r = {}, th = {}, phi = {} ",r,theta,phi);
-        println!("x = {}, y = {}, z = {}",self.position.x,self.position.y,self.position.z);
         return (r,theta,phi);
     }
 

@@ -1,5 +1,5 @@
 use egui_sdl2_gl::egui::Color32;
-use glam::{IVec3, Vec3};
+use glam::Vec3;
 
 
 const LIGHT_SPEED : f32 = std::f32::consts::PI/360.0;
