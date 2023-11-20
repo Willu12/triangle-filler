@@ -8,6 +8,7 @@ use egui_backend::{egui, gl, sdl2};
 use egui_backend::{sdl2::event::Event, DpiScaling, ShaderVersion};
 use egui_sdl2_gl as egui_backend;
 use egui_sdl2_gl::gl::types::GLfloat;
+use sdl2::pixels::Color;
 use sdl2::sys::uint_least32_t;
 use sdl2::video::SwapInterval;
 use crate::shader::get_shader_string_from_file;
@@ -16,6 +17,7 @@ mod grid;
 mod shader;
 mod camera;
 mod egui_manager;
+mod light;
 
 const SCREEN_WIDTH: u32 = 1000;
 const SCREEN_HEIGHT: u32 = 800;
@@ -71,6 +73,9 @@ fn main() {
     let mut tessellation_level: u32 = 10;
     let mut z_coords : [GLfloat;16] = [0.0;16];
     let start_time = Instant::now();
+    let mut object_color = Color32::BLUE;
+    let mut light_color = Color32::WHITE;
+    let mut is_light_moving = false;
 
     let mut grid = grid::Grid::new();
     let mut quit = false;
@@ -91,9 +96,14 @@ fn main() {
         if grid.tessellation_level != tessellation_level {
             grid.tessellation_level = tessellation_level;
         }
+        if grid.light.is_moving != is_light_moving {
+            if is_light_moving {grid.light.start_moving()} else {grid.light.stop_moving()}
+        }
+        if grid.color != object_color {grid.color = object_color}
+        if grid.light.light_color != light_color {grid.light.light_color = light_color};
 
         grid.update_z_coords(z_coords);
-
+        grid.light.update_light_pos();
         grid.draw();
 
         egui::Window::new("Egui with SDL2 and GL").show(&egui_ctx, |ui| {
@@ -105,7 +115,8 @@ fn main() {
             ui.label(" ");
             ui.add(egui::Slider::new(&mut tessellation_level,1..=MAX_TESSELLATION).text("tessellation level"));
             egui_manager::add_sliders_to_egui(ui, &mut z_coords);
-            ui.label(" ");
+            ui.add(egui::Checkbox::new(&mut is_light_moving,"light animation"));
+            egui_manager::add_color_pickers_to_egui(ui,&mut object_color,&mut light_color);
             if ui.button("Quit").clicked() {
                 quit = true;
             }
@@ -127,7 +138,6 @@ fn main() {
         // drawing calls with it.
         // Since we are custom drawing an OpenGL Triangle we don't need egui to clear the background.
         painter.paint_jobs(None, textures_delta, paint_jobs);
-
         window.gl_swap_window();
 
         if !repaint_after.is_zero() {

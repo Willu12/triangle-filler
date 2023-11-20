@@ -4,9 +4,14 @@ use egui_sdl2_gl::gl::types::*;
 use std::mem;
 use std::ptr;
 use std::str;
+use egui_sdl2_gl::egui::ImageData::Color;
+use glam::{Mat3, Mat4, Vec3, Vec4Swizzles};
 use crate::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use crate::camera::Camera;
+use crate::light::Light;
 use crate::shader::*;
+use egui_sdl2_gl::egui::{Color32};
+
 
 const VERTEX_COLOR_STRING: &'static str = "ourColor";
 
@@ -17,8 +22,9 @@ pub struct Grid {
     pub vbo: GLuint,
     pub ebo: GLuint,
     pub program: GLuint,
-    pub color: [GLfloat; 3],
-    pub camera : Camera
+    pub color: Color32,//[GLfloat; 3],
+    pub camera : Camera,
+    pub light : Light,
 }
 
 impl Grid {
@@ -33,7 +39,7 @@ impl Grid {
         let tes = Shader::new(TES_SRC,gl::TESS_EVALUATION_SHADER);
 
         let program = link_program(vs.id, fs.id,tcs.id,tes.id);
-        let color = [1.0,0.3,0.6];
+        let color = Color32::BLUE;
 
         unsafe {
             gl::GenVertexArrays(1, &mut vao);
@@ -42,9 +48,10 @@ impl Grid {
         }
 
         let camera = Camera::new();
+        let light = Light::new();
         vertices[7 * 3 + 2] = 0.5;
 
-        let grid = Grid {tessellation_level: 1, vertices, vao, vbo, ebo, program, color, camera};
+        let grid = Grid {tessellation_level: 1, vertices, vao, vbo, ebo, program, color, camera,light};
         grid.init_grid();
 
         return grid;
@@ -64,15 +71,16 @@ impl Grid {
 
     fn create_patch_vertices() -> [GLfloat;48] {
         let n = 4;
-        let stride = 1.0 / n as f32;
+        let stride = 1.5 / (n - 1) as f32;
 
         let mut vertices : Vec<GLfloat> = vec![];
 
         for i in 0..n {
             for j in 0..n {
-                vertices.push(-0.5 + stride * j as f32);
-                vertices.push(-0.5 + stride * i as f32);
+                vertices.push(-0.75 + stride * j as f32);
+                vertices.push(-0.75 + stride * i as f32);
                 vertices.push(0.0);
+               // println!("x = {}, y = {}, z = {}",-0.75 + stride * j as f32,-0.75 + stride * i as f32,0.0)
             }
         }
         let array = match vertices.try_into() {
@@ -82,6 +90,9 @@ impl Grid {
         return array;
     }
 
+    fn get_color_from_Color32(color: Color32) -> [GLfloat;3] {
+        [color.r() as f32 /255.0, color.g() as f32 /255.0, color.b() as f32 /255.0]
+    }
    pub fn init_grid(&self) {
         unsafe {
             gl::BindVertexArray(self.vao);
@@ -112,32 +123,58 @@ impl Grid {
     unsafe fn set_uniforms(&self) {
         unsafe {
             gl::UseProgram(self.program);
-            let vertex_color_location = get_uniform_location(self.program,VERTEX_COLOR_STRING);
+          //  let vertex_color_location = get_uniform_location(self.program,VERTEX_COLOR_STRING);
+            let light_pos_location = get_uniform_location(self.program,"lightPos");
+            let camera_pos_location = get_uniform_location(self.program,"cameraPos");
+            let object_color_location = get_uniform_location(self.program,"objectColor");
+            let light_color_location = get_uniform_location(self.program,"lightColor");
+            let kd_location = get_uniform_location(self.program,"kd");
+            let ks_location = get_uniform_location(self.program,"ks");
+            let m_location = get_uniform_location(self.program,"m");
 
             let tessellation_level_location = get_uniform_location(self.program,"TessLevel");
 
             self.set_matrices();
-            gl::Uniform3f(vertex_color_location,self.color[0],self.color[1],self.color[2]);
+           // gl::Uniform3f(vertex_color_location,self.color[0],self.color[1],self.color[2]);
             gl::Uniform1ui(tessellation_level_location,self.tessellation_level);
+
+            let light_pos = self.light.light_position;
+            let camera_pos = self.camera.position;
+            let light_col = Grid::get_color_from_Color32(self.light.light_color);
+            let object_col = Grid::get_color_from_Color32(self.color);
+
+            gl::Uniform3f(light_pos_location,light_pos[0],light_pos[1],light_pos[2]);
+            gl::Uniform3f(camera_pos_location,camera_pos[0],camera_pos[1],camera_pos[2]);
+            gl::Uniform3f(light_color_location,light_col[0],light_col[1],light_col[2]);
+            gl::Uniform3f(object_color_location,object_col[0],object_col[1],object_col[2]);
+            gl::Uniform1f(kd_location,self.light.kd);
+            gl::Uniform1f(ks_location,self.light.ks);
+            gl::Uniform1ui(m_location,self.light.m);
+
         }
     }
 
     fn set_matrices(&self) {
         let view = self.camera.get_view();
-        let projection = glam::Mat4::perspective_rh(
+        let projection =glam::Mat4::perspective_lh(
             std::f32::consts::PI / 2.0,
             SCREEN_WIDTH as f32 / SCREEN_HEIGHT as f32,
             0.1,
             100.0);
 
 
+
         let mvp = projection * view;
+        let normal = Mat3::from_cols(view.x_axis.xyz(),view.y_axis.xyz(),view.z_axis.xyz());
 
         unsafe {
             let mvp_location = get_uniform_location(self.program,"MVP");
             let view_location = get_uniform_location(self.program,"ModelViewMatrix");
+            let normal_location = get_uniform_location(self.program,"NormalMatrix");
             gl::UniformMatrix4fv(mvp_location,1,gl::FALSE,mvp.to_cols_array().as_ptr());
             gl::UniformMatrix4fv(view_location,1,gl::FALSE,view.to_cols_array().as_ptr());
+            gl::UniformMatrix3fv(normal_location,1,gl::FALSE,normal.to_cols_array().as_ptr());
+
         }
     }
 

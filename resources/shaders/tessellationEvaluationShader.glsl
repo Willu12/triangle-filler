@@ -79,6 +79,6 @@ void main()
     gl_Position = MVP * TEPosition;
 
     // Convert to camera coordinates
-    TEPosition = ModelViewMatrix * TEPosition;
-   // TENormal = normalize(NormalMatrix * n);
+    TEPosition =  TEPosition;
+    TENormal = normalize(n);
 }

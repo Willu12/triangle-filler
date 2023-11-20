@@ -1,30 +1,28 @@
 use glam::{Mat4, Vec3};
 use sdl2::keyboard::Keycode;
 
-
-const CAMERA_SPEED : f32 = 0.05;
+const CAMERA_SPEED : f32 = std::f32::consts::PI/360.0;
 pub struct Camera {
-    position : Vec3,
+    pub position : Vec3,
     target : Vec3,
     direction : Vec3,
 }
 
-
 impl Camera {
     pub fn new() -> Camera {
-        Camera {position : Vec3::new(0.1,0.0,1.0), target : Vec3::ZERO, direction : Vec3::new(0.0,1.0,0.0)}
+        Camera {position: Vec3::new(0.1,0.0,1.0), target: Vec3::new(0.0,0.0,0.0), direction: Vec3::new(0.0,0.0,1.0)}
     }
 
     fn get_spherical_coordinates(&self) -> (f32,f32,f32) {
-        let r = (self.position.dot(self.position)).sqrt();
-        let theta = f32::asin(self.position.z / r);
-        let phi = f32::atan(self.position.y/ self.position.x);
+        let position = self.position;
+        let r = (position.dot(position)).sqrt();
+        let theta = f32::asin(position.z / r);
+        let phi = f32::atan(position.y/ position.x);
 
-        println!("r = {}, th = {}, phi = {} ",r,theta,phi);
+       // println!("r = {}, th = {}, phi = {} ",r,theta,phi);
+        println!("x = {}, y = {}, z = {}",self.position.x,self.position.y,self.position.z);
         return (r,theta,phi);
     }
-
-
 
     fn update_position_from_spherical_coordinates(&mut self, r: f32, theta : f32, phi: f32) {
         self.position = get_position_from_spherical_coordinates(r,theta,phi);
@@ -51,7 +49,7 @@ impl Camera {
     }
 
     pub fn get_view(&self) -> Mat4 {
-        glam::Mat4::look_at_rh(self.position,self.target,self.direction)
+        glam::Mat4::look_at_lh(self.position,self.target,self.direction)
     }
 }
 
