@@ -27,9 +27,6 @@ fn main() {
     let gl_attr = video_subsystem.gl_attr();
     gl_attr.set_context_profile(GLProfile::Core);
 
-    // Let OpenGL know we are dealing with SRGB colors so that it
-    // can do the blending correctly. Not setting the framebuffer
-    // leads to darkened, over saturated colors.
     gl_attr.set_double_buffer(true);
     gl_attr.set_multisample_samples(4);
     gl_attr.set_framebuffer_srgb_compatible(true);
@@ -39,7 +36,7 @@ fn main() {
 
     let window = video_subsystem
         .window(
-            "Tanczymy Kankana po zmroku w mikrofali",
+            "triangle-filler",
             SCREEN_WIDTH,
             SCREEN_HEIGHT,
         )
@@ -60,8 +57,6 @@ fn main() {
         Result::Ok(()) => {()},
         Result::Err(_) => {}
     }
-      // .unwrap();
-
     // Init egui stuff
     let (mut painter, mut egui_state) =
         egui_backend::with_sdl2(&window, ShaderVersion::Default, DpiScaling::Default);
@@ -75,11 +70,17 @@ fn main() {
     let mut object_color = Color32::BLUE;
     let mut light_color = Color32::WHITE;
     let mut is_light_moving = false;
+    let mut light_z = 0.5;
+    let mut kd = 0.5;
+    let mut texture_set = false;
+    let mut normal_set = false;
+    let mut ks = 0.5;
+    let mut m = 30;
 
     let mut grid = grid::Grid::new();
     unsafe{
-        //grid.add_texture(&Path::new("resources/images/brickwall.jpg"));
-       grid.add_normal_map(&Path::new("resources/images/brickwall_normal.jpg"));
+        //grid.add_texture(&Path::new("resources/images/texture.jpg"));
+        //grid.add_normal_map(&Path::new("resources/images/normal.jpg"));
     }
     let mut quit = false;
 
@@ -102,24 +103,45 @@ fn main() {
         if grid.light.is_moving != is_light_moving {
             if is_light_moving {grid.light.start_moving()} else {grid.light.stop_moving()}
         }
-        if grid.color != object_color {grid.color = object_color}
-        if grid.light.light_color != light_color {grid.light.light_color = light_color};
+        if grid.color != object_color && texture_set == false {grid.color = object_color}
+        if grid.light.light_color != light_color  {grid.light.light_color = light_color};
+
+
+        unsafe {
+            if texture_set && grid.texture.is_none() {
+                grid.add_texture(&Path::new("resources/images/texture.jpg"));
+                grid.color = Color32::WHITE;
+            }
+            if texture_set == false {grid.remove_texture()}
+
+            if normal_set && grid.normal_map.is_none() {
+                grid.add_normal_map(&Path::new("resources/images/normal.jpg"));
+            }
+            if normal_set == false {grid.remove_normal_map()}
+
+        }
+
+
+
+        grid.light.update_light(ks,kd,m,light_z);
 
         grid.update_z_coords(z_coords);
         grid.light.update_light_pos();
         grid.draw();
 
-        egui::Window::new("Moje Paranoje").show(&egui_ctx, |ui| {
-            // Image just needs a texture id reference, so we just pass it the texture id that was returned to us
-            // when we previously initialized the texture.
-
-            ui.separator();
-            ui.label(" ");
-            ui.label(" ");
+        egui::Window::new("settings").show(&egui_ctx, |ui| {
             ui.add(egui::Slider::new(&mut tessellation_level,1..=MAX_TESSELLATION).text("tessellation level"));
             egui_manager::add_sliders_to_egui(ui, &mut z_coords);
             ui.add(egui::Checkbox::new(&mut is_light_moving,"light animation"));
             egui_manager::add_color_pickers_to_egui(ui,&mut object_color,&mut light_color);
+            egui_manager::add_light_sliders_to_egui(ui,&mut ks, &mut kd, &mut m, &mut light_z);
+            ui.horizontal(|ui| {
+                ui.radio_value(&mut texture_set, true, "texture");
+                ui.radio_value(&mut texture_set, false, "color");
+            });
+            ui.add(egui::Checkbox::new(&mut normal_set,"set normal map"));
+
+
             if ui.button("Quit").clicked() {
                 quit = true;
             }
@@ -135,11 +157,6 @@ fn main() {
         egui_state.process_output(&window, &platform_output);
 
         let paint_jobs = egui_ctx.tessellate(shapes);
-
-        // Note: passing a bg_color to paint_jobs will clear any previously drawn stuff.
-        // Use this only if egui is being used for all drawing and you aren't mixing your own Open GL
-        // drawing calls with it.
-        // Since we are custom drawing an OpenGL Triangle we don't need egui to clear the background.
         painter.paint_jobs(None, textures_delta, paint_jobs);
         window.gl_swap_window();
 
@@ -171,3 +188,4 @@ fn main() {
         }
     }
 }
+

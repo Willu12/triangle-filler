@@ -64,8 +64,6 @@ impl Grid {
             let text_map_location = get_uniform_location(program,"ourTexture");
             let normal_map_location = get_uniform_location(program,"normalMap");
 
-            println!("{}",normal_map_location);
-            println!("{}",text_map_location);
             gl::Uniform1i(text_map_location,0);
             gl::Uniform1i(normal_map_location,1);
         }
@@ -177,20 +175,6 @@ impl Grid {
             gl::Uniform1f(kd_location,self.light.kd);
             gl::Uniform1f(ks_location,self.light.ks);
             gl::Uniform1ui(m_location,self.light.m);
-
-            /*
-            unsafe {
-                let text_map_location = get_uniform_location(self.program,"ourTexture");
-                let normal_map_location = get_uniform_location(self.program,"normalMap");
-
-                println!("{}",normal_map_location);
-                println!("{}",text_map_location);
-                gl::Uniform1i(text_map_location,0);
-                gl::Uniform1i(normal_map_location,1);
-            }
-            */
-
-
         }
     }
 
@@ -224,7 +208,6 @@ impl Grid {
             Some(texture) => {
                 gl::Uniform1i(is_texture_set_location,true as i32);
                 texture.activate(gl::TEXTURE0);
-               // println!("texture id {}",texture.id);
 
             }
             None => {
@@ -240,8 +223,6 @@ impl Grid {
             Some(normal_map) => {
                 gl::Uniform1i(is_normal_set_location,true as i32);
                 normal_map.activate(gl::TEXTURE1);
-              //  println!("normal_map id {}",normal_map.id);
-
             }
             None => {
                 gl::Uniform1i(is_normal_set_location,false as i32);
@@ -264,6 +245,7 @@ impl Grid {
     pub fn remove_texture(&mut self) {
         self.texture = None;
     }
+    pub fn remove_normal_map(&mut self) {self.normal_map = None;}
 }
 
 unsafe fn get_uniform_location(program: GLuint, uniform_name: &str) -> GLint {

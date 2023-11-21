@@ -31,6 +31,7 @@ void main() {
     float cos_n_l = dot(normal,lightVector);
     float cos_R_l_m = pow(dot(V,reflect(normal,lightPos)),m);
 
+    cos_n_l = max(0.0,min(1.0,cos_n_l));
     cos_R_l_m = max(0.0,min(1.0,cos_R_l_m));
     vec3 rgb = kd * lightColor * objectColor * cos_n_l + ks * lightColor * objectColor * cos_R_l_m;
 

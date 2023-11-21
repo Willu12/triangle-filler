@@ -23,12 +23,10 @@ impl Texture {
 
     pub unsafe fn bind(&self) {
         gl::BindTexture(gl::TEXTURE_2D, self.id);
-       // println!("binding texture {}",self.id);
     }
 
     pub unsafe fn load(&self, path: &Path){
         self.bind();
-        println!("loading path {}",path.display());
         let img = image::open(path).expect("failed_to_load_image").into_rgba8();
         gl::TexImage2D(
             gl::TEXTURE_2D,

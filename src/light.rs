@@ -61,4 +61,11 @@ impl Light {
         return (r,phi)
     }
 
+    pub fn update_light(&mut self,ks: f32, kd: f32, m:u32, z_coord: f32) {
+        self.m = m;
+        self.ks = ks;
+        self.kd = kd;
+        self.light_position.z = z_coord;
+    }
+
 }

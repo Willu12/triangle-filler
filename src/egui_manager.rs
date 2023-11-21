@@ -22,3 +22,13 @@ pub fn add_color_pickers_to_egui(ui: &mut egui_sdl2_gl::egui::Ui, object_color: 
         ui.color_edit_button_srgba(light_color);
     });
 }
+
+pub fn add_light_sliders_to_egui(ui: &mut egui_sdl2_gl::egui::Ui,ks: &mut f32, kd: &mut f32, m: &mut u32,z : &mut f32) {
+    egui::Grid::new("color_sliders").show(ui, |ui| {
+        ui.add(egui::Slider::new(ks,0.0..=1.0).text("ks"));
+        ui.add(egui::Slider::new(kd,0.0..=1.0).text("kd"));
+        ui.add(egui::Slider::new(m,1..=100).text("m"));
+        ui.add(egui::Slider::new(z,0.0..=1.0).text("light_z"));
+
+    });
+}
