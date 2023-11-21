@@ -12,6 +12,7 @@ use crate::shader::*;
 use egui_sdl2_gl::egui::Color32;
 use crate::texture::Texture;
 
+
 pub struct Grid {
     pub tessellation_level: u32,
     pub vertices: [GLfloat; 48],
@@ -19,14 +20,16 @@ pub struct Grid {
     pub vbo: GLuint,
     pub ebo: GLuint,
     pub program: GLuint,
-    pub color: Color32,//[GLfloat; 3],
+    pub color: Color32,
     pub camera : Camera,
     pub light : Light,
     pub texture: Option<Texture>,
+    pub normal_map: Option<Texture>,
 }
 
 impl Grid {
     pub fn new() -> Self {
+
 
         let mut vertices = Grid::create_patch_vertices();
 
@@ -50,9 +53,22 @@ impl Grid {
         vertices[7 * 3 + 2] = 0.5;
         let tessellation_level = 1;
         let texture = None;
+        let normal_map = None;
 
-        let grid = Grid {tessellation_level, vertices, vao, vbo, ebo, program, color, camera,light,texture};
+        let grid = Grid {tessellation_level, vertices, vao, vbo, ebo, program, color, camera,light,texture,normal_map};
         grid.init_grid();
+
+        unsafe {
+            gl::UseProgram(program);
+
+            let text_map_location = get_uniform_location(program,"ourTexture");
+            let normal_map_location = get_uniform_location(program,"normalMap");
+
+            println!("{}",normal_map_location);
+            println!("{}",text_map_location);
+            gl::Uniform1i(text_map_location,0);
+            gl::Uniform1i(normal_map_location,1);
+        }
 
         return grid;
     }
@@ -80,7 +96,6 @@ impl Grid {
                 vertices.push(-0.75 + stride * j as f32);
                 vertices.push(-0.75 + stride * i as f32);
                 vertices.push(0.0);
-               // println!("x = {}, y = {}, z = {}",-0.75 + stride * j as f32,-0.75 + stride * i as f32,0.0)
             }
         }
         let array = match vertices.try_into() {
@@ -121,13 +136,19 @@ impl Grid {
 
     pub unsafe fn add_texture(&mut self, path: &Path) {
         self.texture = Some(Texture::new());
+        //gl::ActiveTexture(gl::TEXTURE0);
         self.texture.as_ref().unwrap().load(path);
+    }
+
+    pub unsafe fn add_normal_map(&mut self, path: &Path) {
+        self.normal_map = Some(Texture::new());
+      //  gl::ActiveTexture(gl::TEXTURE1);
+        self.normal_map.as_ref().unwrap().load(path);
     }
 
 
     unsafe fn set_uniforms(&self) {
         unsafe {
-            gl::UseProgram(self.program);
           //  let vertex_color_location = get_uniform_location(self.program,VERTEX_COLOR_STRING);
             let light_pos_location = get_uniform_location(self.program,"lightPos");
             let camera_pos_location = get_uniform_location(self.program,"cameraPos");
@@ -136,7 +157,7 @@ impl Grid {
             let kd_location = get_uniform_location(self.program,"kd");
             let ks_location = get_uniform_location(self.program,"ks");
             let m_location = get_uniform_location(self.program,"m");
-           //let text_location = get_uniform_location(self.program,)
+
 
             let tessellation_level_location = get_uniform_location(self.program,"TessLevel");
 
@@ -156,6 +177,19 @@ impl Grid {
             gl::Uniform1f(kd_location,self.light.kd);
             gl::Uniform1f(ks_location,self.light.ks);
             gl::Uniform1ui(m_location,self.light.m);
+
+            /*
+            unsafe {
+                let text_map_location = get_uniform_location(self.program,"ourTexture");
+                let normal_map_location = get_uniform_location(self.program,"normalMap");
+
+                println!("{}",normal_map_location);
+                println!("{}",text_map_location);
+                gl::Uniform1i(text_map_location,0);
+                gl::Uniform1i(normal_map_location,1);
+            }
+            */
+
 
         }
     }
@@ -180,19 +214,55 @@ impl Grid {
             gl::UniformMatrix4fv(mvp_location,1,gl::FALSE,mvp.to_cols_array().as_ptr());
             gl::UniformMatrix4fv(view_location,1,gl::FALSE,view.to_cols_array().as_ptr());
             gl::UniformMatrix3fv(normal_location,1,gl::FALSE,normal.to_cols_array().as_ptr());
+        }
+    }
 
+    unsafe fn prepare_textures(&self) {
+
+        let is_texture_set_location = get_uniform_location(self.program,"isTextureSet");
+        match self.texture.as_ref() {
+            Some(texture) => {
+                gl::Uniform1i(is_texture_set_location,true as i32);
+                texture.activate(gl::TEXTURE0);
+               // println!("texture id {}",texture.id);
+
+            }
+            None => {
+                gl::Uniform1i(is_texture_set_location,false as i32);
+            }
+        }
+    }
+
+    unsafe fn prepare_normal_map(&self) {
+        let is_normal_set_location = get_uniform_location(self.program,"isNormalMapSet");
+
+        match self.normal_map.as_ref() {
+            Some(normal_map) => {
+                gl::Uniform1i(is_normal_set_location,true as i32);
+                normal_map.activate(gl::TEXTURE1);
+              //  println!("normal_map id {}",normal_map.id);
+
+            }
+            None => {
+                gl::Uniform1i(is_normal_set_location,false as i32);
+            }
         }
     }
 
     pub fn draw(&self) {
         unsafe {
+            gl::UseProgram(self.program);
             self.set_uniforms();
-            self.texture.as_ref().unwrap().bind();
-
+            self.prepare_textures();
+            self.prepare_normal_map();
             gl::BindVertexArray(self.vao);
             gl::DrawArrays(gl::PATCHES,0,16);
             gl::BindVertexArray(0);
         }
+    }
+
+    pub fn remove_texture(&mut self) {
+        self.texture = None;
     }
 }
 

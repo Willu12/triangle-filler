@@ -15,7 +15,6 @@ mod shader;
 mod camera;
 mod egui_manager;
 mod light;
-mod normalMap;
 mod texture;
 
 const SCREEN_WIDTH: u32 = 1000;
@@ -40,7 +39,7 @@ fn main() {
 
     let window = video_subsystem
         .window(
-            "Demo: Egui backend for SDL2 + GL",
+            "Tanczymy Kankana po zmroku w mikrofali",
             SCREEN_WIDTH,
             SCREEN_HEIGHT,
         )
@@ -79,7 +78,8 @@ fn main() {
 
     let mut grid = grid::Grid::new();
     unsafe{
-        grid.add_texture(Path::new("resources/images/normal_map.jpg"));
+        //grid.add_texture(&Path::new("resources/images/brickwall.jpg"));
+       grid.add_normal_map(&Path::new("resources/images/brickwall_normal.jpg"));
     }
     let mut quit = false;
 
@@ -109,7 +109,7 @@ fn main() {
         grid.light.update_light_pos();
         grid.draw();
 
-        egui::Window::new("Egui with SDL2 and GL").show(&egui_ctx, |ui| {
+        egui::Window::new("Moje Paranoje").show(&egui_ctx, |ui| {
             // Image just needs a texture id reference, so we just pass it the texture id that was returned to us
             // when we previously initialized the texture.
 

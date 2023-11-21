@@ -3,6 +3,8 @@ layout( quads ) in;
 
 out vec3 TENormal;
 out vec4 TEPosition;
+out vec2 TexCoord;
+out mat3 TBN;
 
 uniform mat4 MVP;
 uniform mat4 ModelViewMatrix;
@@ -81,4 +83,6 @@ void main()
     // Convert to camera coordinates
     TEPosition =  TEPosition;
     TENormal = normalize(n);
+    TBN = mat3 (normalize(cross(du.xyz,n)),normalize(cross(du.xyz,n)),n);
+    TexCoord = vec2(u,v);
 }
