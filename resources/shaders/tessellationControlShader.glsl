@@ -3,7 +3,6 @@ layout(vertices = 16) out;
 uniform uint TessLevel;
 void main()
 {
-    // Pass along the vertex position unmodified
     gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
     gl_TessLevelOuter[0] = float(TessLevel);
     gl_TessLevelOuter[1] = float(TessLevel);
