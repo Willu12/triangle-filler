@@ -24,15 +24,14 @@ void main() {
 
     normal = -normalize(TBN * normal);
 
-    vec3 TENormal = -normalize(TENormal);
     vec3 lightVector = normalize(lightPos - TEPosition.xyz);
     vec3 V = normalize(cameraPos - TEPosition.xyz);
 
     float cos_n_l = dot(normal,lightVector);
-    float cos_R_l_m = pow(dot(V,reflect(normal,lightPos)),m);
+    float cos_R_l_m = dot(V,reflect(normal,lightVector));
 
     cos_n_l = max(0.0,min(1.0,cos_n_l));
-    cos_R_l_m = max(0.0,min(1.0,cos_R_l_m));
+    cos_R_l_m = pow(max(0.0,min(1.0,cos_R_l_m)),m);
     vec3 rgb = kd * lightColor * objectColor * cos_n_l + ks * lightColor * objectColor * cos_R_l_m;
 
     vec4 normal_text = texture(normalMap,TexCoord);
