@@ -20,11 +20,16 @@ pub struct Grid {
     pub vbo: GLuint,
     pub ebo: GLuint,
     pub program: GLuint,
+    pub mesh_program: GLuint,
     pub color: Color32,
     pub camera : Camera,
     pub light : Light,
     pub texture: Option<Texture>,
     pub normal_map: Option<Texture>,
+    pub fill : bool,
+    pub mesh : bool,
+    pub main_light : bool,
+    pub reflectors: bool,
 }
 
 impl Grid {
@@ -39,7 +44,13 @@ impl Grid {
         let tcs = Shader::new(TCS_SRC,gl::TESS_CONTROL_SHADER);
         let tes = Shader::new(TES_SRC,gl::TESS_EVALUATION_SHADER);
 
+        let fsm = Shader::new(FSM_SRC,gl::FRAGMENT_SHADER);
+        let vsm = Shader::new(VS_SRC, gl::VERTEX_SHADER);
+        let tcsm = Shader::new(TCS_SRC,gl::TESS_CONTROL_SHADER);
+        let tesm = Shader::new(TES_SRC,gl::TESS_EVALUATION_SHADER);
+
         let program = link_program(vs.id, fs.id,tcs.id,tes.id);
+        let mesh_program = link_program(vsm.id,fsm.id,tcsm.id,tesm.id);
         let color = Color32::BLUE;
 
         unsafe {
@@ -55,7 +66,7 @@ impl Grid {
         let texture = None;
         let normal_map = None;
 
-        let grid = Grid {tessellation_level, vertices, vao, vbo, ebo, program, color, camera,light,texture,normal_map};
+        let grid = Grid {tessellation_level, vertices, vao, vbo, ebo, program,mesh_program, color, camera,light,texture,normal_map, fill: true, mesh : true, reflectors:true,main_light:true};
         grid.init_grid();
 
         unsafe {
@@ -144,6 +155,14 @@ impl Grid {
         self.normal_map.as_ref().unwrap().load(path);
     }
 
+    unsafe fn set_mesh_uniforms(&self)  {
+
+        let tessellation_level_location = get_uniform_location(self.mesh_program,"TessLevel");
+        self.set_matrices(self.mesh_program);
+
+        gl::Uniform1ui(tessellation_level_location,self.tessellation_level);
+    }
+
 
     unsafe fn set_uniforms(&self) {
         unsafe {
@@ -155,11 +174,18 @@ impl Grid {
             let kd_location = get_uniform_location(self.program,"kd");
             let ks_location = get_uniform_location(self.program,"ks");
             let m_location = get_uniform_location(self.program,"m");
+            let main_light = get_uniform_location(self.program,"main_light");
+            let reflectors = get_uniform_location(self.program,"reflectors");
+
+            gl::Uniform1i(reflectors,self.reflectors as i32);
+            gl::Uniform1i(main_light,self.main_light as i32);
+           // if self.reflectors { gl::Uniform1i(reflectors,1);} else { gl::Uniform1ui(m_location,self.light.m);}
+
 
 
             let tessellation_level_location = get_uniform_location(self.program,"TessLevel");
 
-            self.set_matrices();
+            self.set_matrices(self.program);
            // gl::Uniform3f(vertex_color_location,self.color[0],self.color[1],self.color[2]);
             gl::Uniform1ui(tessellation_level_location,self.tessellation_level);
 
@@ -178,7 +204,7 @@ impl Grid {
         }
     }
 
-    fn set_matrices(&self) {
+    fn set_matrices(&self,program: GLuint) {
         let view = self.camera.get_view();
         let projection =glam::Mat4::perspective_lh(
             std::f32::consts::PI / 2.0,
@@ -192,9 +218,9 @@ impl Grid {
         let normal = Mat3::from_cols(view.x_axis.xyz(),view.y_axis.xyz(),view.z_axis.xyz());
 
         unsafe {
-            let mvp_location = get_uniform_location(self.program,"MVP");
-            let view_location = get_uniform_location(self.program,"ModelViewMatrix");
-            let normal_location = get_uniform_location(self.program,"NormalMatrix");
+            let mvp_location = get_uniform_location(program,"MVP");
+            let view_location = get_uniform_location(program,"ModelViewMatrix");
+            let normal_location = get_uniform_location(program,"NormalMatrix");
             gl::UniformMatrix4fv(mvp_location,1,gl::FALSE,mvp.to_cols_array().as_ptr());
             gl::UniformMatrix4fv(view_location,1,gl::FALSE,view.to_cols_array().as_ptr());
             gl::UniformMatrix3fv(normal_location,1,gl::FALSE,normal.to_cols_array().as_ptr());
@@ -232,12 +258,29 @@ impl Grid {
 
     pub fn draw(&self) {
         unsafe {
-            gl::UseProgram(self.program);
-            self.set_uniforms();
-            self.prepare_textures();
-            self.prepare_normal_map();
+
             gl::BindVertexArray(self.vao);
-            gl::DrawArrays(gl::PATCHES,0,16);
+
+            if self.fill {
+                gl::UseProgram(self.program);
+                self.set_uniforms();
+                self.prepare_textures();
+                self.prepare_normal_map();
+                gl::DrawArrays(gl::PATCHES,0,16);
+            }
+
+            if self.mesh {
+                gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
+
+                gl::UseProgram(self.mesh_program);
+                self.set_mesh_uniforms();
+                self.set_uniforms();
+
+                gl::DrawArrays(gl::PATCHES,0,16);
+                gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
+            }
+
+
             gl::BindVertexArray(0);
         }
     }

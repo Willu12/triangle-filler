@@ -9,6 +9,7 @@ pub const VS_SRC: &'static str = "resources/shaders/vertexShader.glsl";
 pub const FS_SRC: &'static str = "resources/shaders/fragmentShader.glsl";
 pub const TCS_SRC: &'static str = "resources/shaders/tessellationControlShader.glsl";
 pub const TES_SRC: &'static str = "resources/shaders/tessellationEvaluationShader.glsl";
+pub const FSM_SRC: &'static str = "resources/shaders/fragmentMeshShader.glsl";
 
 
 pub struct Shader {

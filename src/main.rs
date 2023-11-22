@@ -77,6 +77,11 @@ fn main() {
     let mut ks = 0.5;
     let mut m = 30;
 
+    let mut fill = true;
+    let mut mesh = true;
+    let mut reflectors = true;
+    let mut main_light = true;
+
     let mut grid = grid::Grid::new();
     unsafe{
         //grid.add_texture(&Path::new("resources/images/texture.jpg"));
@@ -105,6 +110,10 @@ fn main() {
         }
         if grid.color != object_color && texture_set == false {grid.color = object_color}
         if grid.light.light_color != light_color  {grid.light.light_color = light_color};
+        grid.mesh = mesh;
+        grid.fill = fill;
+        grid.main_light = main_light;
+        grid.reflectors = reflectors;
 
 
         unsafe {
@@ -140,6 +149,11 @@ fn main() {
                 ui.radio_value(&mut texture_set, false, "color");
             });
             ui.add(egui::Checkbox::new(&mut normal_set,"set normal map"));
+            ui.add(egui::Checkbox::new(&mut fill,"FILL"));
+            ui.add(egui::Checkbox::new(&mut mesh,"MESH"));
+            ui.add(egui::Checkbox::new(&mut main_light,"main_light"));
+            ui.add(egui::Checkbox::new(&mut reflectors,"reflectors"));
+
 
 
             if ui.button("Quit").clicked() {
