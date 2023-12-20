@@ -52,7 +52,7 @@ impl Grid {
 
         let program = link_program(vs.id, fs.id,tcs.id,tes.id);
         let mesh_program = link_program(vsm.id,fsm.id,tcsm.id,tesm.id);
-        let color = Color32::BLUE;
+        let color = Color32::WHITE;
 
         unsafe {
             gl::GenVertexArrays(1, &mut vao);

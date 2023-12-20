@@ -69,7 +69,7 @@ fn main() {
     let mut z_coords : [GLfloat;16] = [0.0, 0.5, -0.5, 0.3, 0.2, 0.0, 0.4, 0.2, 0.1, - 0.1,
                                         -0.4, 0.3, 0.4, 0.2, 0.0,-0.3];
     let start_time = Instant::now();
-    let mut object_color = Color32::BLUE;
+    let mut object_color = Color32::WHITE;
     let mut light_color = Color32::WHITE;
     let mut is_light_moving = false;
     let mut light_z = 0.5;
