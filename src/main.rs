@@ -1,3 +1,4 @@
+use std::f32::consts::PI;
 use std::path::Path;
 use std::time::Instant;
 
@@ -65,7 +66,8 @@ fn main() {
 
     // grid variables
     let mut tessellation_level: u32 = 10;
-    let mut z_coords : [GLfloat;16] = [0.0;16];
+    let mut z_coords : [GLfloat;16] = [0.0, 0.5, -0.5, 0.3, 0.2, 0.0, 0.4, 0.2, 0.1, - 0.1,
+                                        -0.4, 0.3, 0.4, 0.2, 0.0,-0.3];
     let start_time = Instant::now();
     let mut object_color = Color32::BLUE;
     let mut light_color = Color32::WHITE;
@@ -86,6 +88,11 @@ fn main() {
     unsafe{
         //grid.add_texture(&Path::new("resources/images/texture.jpg"));
         //grid.add_normal_map(&Path::new("resources/images/normal.jpg"));
+
+    }
+    unsafe {
+        gl::Enable(gl::DEPTH_TEST);
+        gl::DepthFunc(gl::LESS);
     }
     let mut quit = false;
 
@@ -97,8 +104,8 @@ fn main() {
         // overlaying it:
         // First clear the background to something nice.
         unsafe {
+            gl::Clear(gl::COLOR_BUFFER_BIT| gl::DEPTH_BUFFER_BIT);
             gl::ClearColor(0.3, 0.2, 0.3, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
         }
 
         //update tessellation
@@ -130,12 +137,11 @@ fn main() {
 
         }
 
-
-
         grid.light.update_light(ks,kd,m,light_z);
-
         grid.update_z_coords(z_coords);
         grid.light.update_light_pos();
+        grid.angle = grid.angle + 0.005 % 360.0;
+
         grid.draw();
 
         egui::Window::new("settings").show(&egui_ctx, |ui| {
@@ -155,7 +161,6 @@ fn main() {
             ui.add(egui::Checkbox::new(&mut reflectors,"reflectors"));
 
 
-
             if ui.button("Quit").clicked() {
                 quit = true;
             }
@@ -173,6 +178,7 @@ fn main() {
         let paint_jobs = egui_ctx.tessellate(shapes);
         painter.paint_jobs(None, textures_delta, paint_jobs);
         window.gl_swap_window();
+
 
         if !repaint_after.is_zero() {
             if let Some(event) = event_pump.wait_event_timeout(5) {

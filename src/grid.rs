@@ -4,7 +4,7 @@ use std::mem;
 use std::path::Path;
 use std::ptr;
 use std::str;
-use glam::{Mat3, Vec4Swizzles};
+use glam::{Mat3, Mat4, Vec3, Vec4Swizzles};
 use crate::{SCREEN_HEIGHT, SCREEN_WIDTH};
 use crate::camera::Camera;
 use crate::light::Light;
@@ -30,6 +30,7 @@ pub struct Grid {
     pub mesh : bool,
     pub main_light : bool,
     pub reflectors: bool,
+    pub angle: f32,
 }
 
 impl Grid {
@@ -66,7 +67,7 @@ impl Grid {
         let texture = None;
         let normal_map = None;
 
-        let grid = Grid {tessellation_level, vertices, vao, vbo, ebo, program,mesh_program, color, camera,light,texture,normal_map, fill: true, mesh : true, reflectors:true,main_light:true};
+        let grid = Grid {tessellation_level, vertices, vao, vbo, ebo, program,mesh_program, color, camera,light,texture,normal_map, fill: true, mesh : true, reflectors:true,main_light:true,angle: 0.0};
         grid.init_grid();
 
         unsafe {
@@ -155,16 +156,16 @@ impl Grid {
         self.normal_map.as_ref().unwrap().load(path);
     }
 
-    unsafe fn set_mesh_uniforms(&self)  {
+    unsafe fn set_mesh_uniforms(&self,i: i32)  {
 
         let tessellation_level_location = get_uniform_location(self.mesh_program,"TessLevel");
-        self.set_matrices(self.mesh_program);
+        self.set_matrices(self.mesh_program,i);
 
         gl::Uniform1ui(tessellation_level_location,self.tessellation_level);
     }
 
 
-    unsafe fn set_uniforms(&self) {
+    unsafe fn set_uniforms(&self,i :i32) {
         unsafe {
           //  let vertex_color_location = get_uniform_location(self.program,VERTEX_COLOR_STRING);
             let light_pos_location = get_uniform_location(self.program,"lightPos");
@@ -185,7 +186,7 @@ impl Grid {
 
             let tessellation_level_location = get_uniform_location(self.program,"TessLevel");
 
-            self.set_matrices(self.program);
+            self.set_matrices(self.program,i);
            // gl::Uniform3f(vertex_color_location,self.color[0],self.color[1],self.color[2]);
             gl::Uniform1ui(tessellation_level_location,self.tessellation_level);
 
@@ -204,7 +205,7 @@ impl Grid {
         }
     }
 
-    fn set_matrices(&self,program: GLuint) {
+    fn set_matrices(&self,program: GLuint,i:i32) {
         let view = self.camera.get_view();
         let projection =glam::Mat4::perspective_lh(
             std::f32::consts::PI / 2.0,
@@ -212,9 +213,25 @@ impl Grid {
             0.1,
             100.0);
 
+        let mut modal = Mat4::IDENTITY;
+        if i == 0 {
+           // modal *= Mat4::from_translation(Vec3::new(0.75, 0.75, 0.0));
+            modal *= Mat4::from_rotation_x(self.angle);
+           // modal *= Mat4::from_translation(Vec3::new(-0.75, -0.75, 0.0));
+        }
+        else if i == 1 {
+          //  modal *= Mat4::from_translation(Vec3::new(0.5, 0.5, 0.0));
+            modal *= Mat4::from_rotation_y(self.angle);
+          //  modal *= Mat4::from_translation(Vec3::new(-0.5, -0.5, 0.0));
+        }
+        else {
+           // modal *= Mat4::from_translation(Vec3::new(0.5, 0.5, 0.0));
+            modal *= Mat4::from_rotation_z(self.angle);
+           // modal *= Mat4::from_translation(Vec3::new(-0.5, -0.5, 0.0));
+        }
 
 
-        let mvp = projection * view;
+        let mvp = projection * view * modal;
         let normal = Mat3::from_cols(view.x_axis.xyz(),view.y_axis.xyz(),view.z_axis.xyz());
 
         unsafe {
@@ -258,28 +275,32 @@ impl Grid {
 
     pub fn draw(&self) {
         unsafe {
-
+            gl::DepthFunc(gl::LESS);
             gl::BindVertexArray(self.vao);
 
-            if self.fill {
-                gl::UseProgram(self.program);
-                self.set_uniforms();
-                self.prepare_textures();
-                self.prepare_normal_map();
-                gl::DrawArrays(gl::PATCHES,0,16);
+            for i in 0..3 {
+                if self.fill {
+                    gl::UseProgram(self.program);
+                    self.set_uniforms(i);
+                    self.prepare_textures();
+                    self.prepare_normal_map();
+                    gl::DrawArrays(gl::PATCHES,0,16);
+                }
+
+                if self.mesh {
+                    gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
+
+                    gl::UseProgram(self.mesh_program);
+                    self.set_mesh_uniforms(i);
+                    self.set_uniforms(i);
+
+                    gl::DrawArrays(gl::PATCHES,0,16);
+                    gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
+                }
             }
 
-            if self.mesh {
-                gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
 
-                gl::UseProgram(self.mesh_program);
-                self.set_mesh_uniforms();
-                self.set_uniforms();
-
-                gl::DrawArrays(gl::PATCHES,0,16);
-                gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
-            }
-
+            gl::DepthFunc(gl::ALWAYS);
 
             gl::BindVertexArray(0);
         }

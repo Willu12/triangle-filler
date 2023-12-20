@@ -1,7 +1,7 @@
 use glam::{Mat4, Vec3};
 use sdl2::keyboard::Keycode;
 
-const CAMERA_SPEED : f32 = std::f32::consts::PI/360.0;
+const CAMERA_SPEED : f32 = 2.0 * std::f32::consts::PI/360.0;
 pub struct Camera {
     pub position : Vec3,
     target : Vec3,
@@ -10,7 +10,7 @@ pub struct Camera {
 
 impl Camera {
     pub fn new() -> Camera {
-        Camera {position: Vec3::new(0.1,0.0,1.0), target: Vec3::new(0.0,0.0,0.0), direction: Vec3::new(0.0,0.0,1.0)}
+        Camera {position: Vec3::new(0.1,1.0,2.0), target: Vec3::new(0.0,0.0,0.0), direction: Vec3::new(0.0,0.0,1.0)}
     }
 
     fn get_spherical_coordinates(&self) -> (f32,f32,f32) {
